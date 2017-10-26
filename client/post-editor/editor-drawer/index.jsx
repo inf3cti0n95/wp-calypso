@@ -86,7 +86,6 @@ class EditorDrawer extends Component {
 		isPostPrivate: PropTypes.bool,
 		confirmationSidebarStatus: PropTypes.string,
 		setNestedSidebar: PropTypes.func,
-		selectRevision: PropTypes.func,
 	};
 
 	onExcerptChange( event ) {
@@ -335,7 +334,6 @@ class EditorDrawer extends Component {
 					isPostPrivate={ this.props.isPostPrivate }
 					confirmationSidebarStatus={ this.props.confirmationSidebarStatus }
 					setNestedSidebar={ this.props.setNestedSidebar }
-					selectRevision={ this.props.selectRevision }
 				/>
 			</Accordion>
 		);
