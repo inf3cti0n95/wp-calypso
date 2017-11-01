@@ -15,7 +15,7 @@ import { capitalize } from 'lodash';
  * Internal dependencies
  */
 import config from 'config';
-import { getCurrentQueryArguments } from 'state/ui/selectors';
+import getCurrentQueryArguments from 'state/selectors/get-current-query-arguments';
 import { loginSocialUser, createSocialUser, createSocialUserFailed } from 'state/login/actions';
 import {
 	getCreatedSocialAccountUsername,
