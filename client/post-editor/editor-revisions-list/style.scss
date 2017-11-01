@@ -60,14 +60,13 @@
 	color: $gray-text-min;
 }
 
-.editor-ground-control__popover {
-	// @TODO at wider viewports, move this left some
-	//margin-left: -4vw;
-	//	width: 88vw;
+.editor-ground-control__dialog {
+	min-width: 600px;
 }
 
 .editor-revisions__wrapper {
 	display: flex;
+	height: 96vh;
 	justify-content: space-between;
 
 	.editor-revisions-list {
