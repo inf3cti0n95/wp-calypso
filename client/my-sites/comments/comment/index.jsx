@@ -76,7 +76,7 @@ export class Comment extends Component {
 	render() {
 		const {
 			commentId,
-			commentStatus,
+			commentIsPending,
 			isBulkMode,
 			isLoading,
 			isSelected,
@@ -88,12 +88,14 @@ export class Comment extends Component {
 		} = this.props;
 		const { isEditMode, isExpanded } = this.state;
 
+		const showActions = isExpanded || ( ! isBulkMode && commentIsPending );
+
 		const classes = classNames( 'comment', {
 			'is-bulk-mode': isBulkMode,
-			'is-collapsed': ! isExpanded && ! isBulkMode,
+			'is-collapsed': ! isExpanded,
 			'is-expanded': isExpanded,
 			'is-placeholder': isLoading,
-			'is-unapproved': 'unapproved' === commentStatus,
+			'is-pending': commentIsPending,
 		} );
 
 		return (
@@ -114,9 +116,11 @@ export class Comment extends Component {
 
 						<CommentContent { ...{ commentId, isExpanded } } />
 
-						<CommentActions
-							{ ...{ commentId, isExpanded, removeFromPersisted, updatePersisted } }
-						/>
+						{ showActions && (
+							<CommentActions
+								{ ...{ commentId, isExpanded, removeFromPersisted, updatePersisted } }
+							/>
+						) }
 					</div>
 				) }
 			</Card>
@@ -127,8 +131,9 @@ export class Comment extends Component {
 const mapStateToProps = ( state, { commentId } ) => {
 	const siteId = getSelectedSiteId( state );
 	const comment = getSiteComment( state, siteId, commentId );
+	const commentStatus = get( comment, 'status' );
 	return {
-		commentStatus: get( comment, 'status' ),
+		commentIsPending: 'unapproved' === commentStatus,
 		isLoading: isUndefined( comment ),
 		siteId,
 	};
