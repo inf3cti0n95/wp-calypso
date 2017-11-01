@@ -3,7 +3,7 @@ var config = require( 'config' ),
 
 function getSectionsModule( sections ) {
 	var dependencies,
-		loadSection = '',
+		sectionPreLoaders = '',
 		sectionLoaders = '';
 
 	if ( config.isEnabled( 'code-splitting' ) ) {
@@ -15,13 +15,15 @@ function getSectionsModule( sections ) {
 			"\tLoadingError = require( 'layout/error' ),",
 			"\tcontroller = require( 'controller' ),",
 			"\trestoreLastSession = require( 'lib/restore-last-path' ).restoreLastSession,",
-			"\tpreloadHub = require( 'sections-preload' ).hub;",
-			'\n',
+			"\tpreloadHub = require( 'sections-preload' ).hub,",
+			"\tswitchCSS = require( 'lib/i18n-utils/switch-locale' ).switchCSS;",
+			'',
 			'var _loadedSections = {};\n'
 		].join( '\n' );
 
 		sections.forEach( function( section ) {
-			loadSection += singleEnsure( section.name );
+			sectionPreLoaders += singleEnsure( section );
+
 			section.paths.forEach( function( path ) {
 				sectionLoaders += splitTemplate( path, section );
 			} );
@@ -31,19 +33,17 @@ function getSectionsModule( sections ) {
 			dependencies,
 			'function preload( section ) {',
 			'	switch ( section ) {',
-			'	' + loadSection,
-			'	}',
+			sectionPreLoaders + '	}',
 			'}',
-			'\n',
+			'',
 			"preloadHub.on( 'preload', preload );",
-			'\n',
+			'',
 			'module.exports = {',
 			'	get: function() {',
 			'		return ' + JSON.stringify( sections ) + ';',
 			'	},',
 			'	load: function() {',
-			'		' + sectionLoaders,
-			'	}',
+			sectionLoaders + '	}',
 			'};'
 		].join( '\n' );
 	}
@@ -88,42 +88,42 @@ function splitTemplate( path, section ) {
 		result;
 
 	result = [
-		'page( ' + pathRegex + ', function( context, next ) {',
-		'	var envId = ' + envIdString + ';',
-		'	if ( envId && envId.indexOf( config( "env_id" ) ) === -1 ) {',
-		'		return next();',
-		'	}',
-		'	if ( _loadedSections[ ' + moduleString + ' ] ) {',
-		'		controller.setSection( ' + sectionString + ' )( context );',
-		'		context.store.dispatch( activateNextLayoutFocus() );',
-		'		return next();',
-		'	}',
-		'	if ( config.isEnabled( "restore-last-location" ) && restoreLastSession( context.path ) ) {',
-		'		return;',
-		'	}',
-		'	context.store.dispatch( { type: "SECTION_SET", isLoading: true } );',
-		'	require.ensure([], function( require ) {',
-		'		context.store.dispatch( { type: "SECTION_SET", isLoading: false } );',
-		'		controller.setSection( ' + sectionString + ' )( context );',
-		'		if ( ! _loadedSections[ ' + moduleString + ' ] ) {',
-		'			require( ' + moduleString + ' )( controller.clientRouter );',
-		'			_loadedSections[ ' + moduleString + ' ] = true;',
-		'		}',
-		'		context.store.dispatch( activateNextLayoutFocus() );',
-		'		next();',
-		'	}, function onError( error ) {',
-		'		if ( ! LoadingError.isRetry() ) {',
-		'			console.warn( error );',
-		'			LoadingError.retry( ' + sectionNameString + ' );',
-		'		} else {',
-		'			console.error( error );',
-		'			context.store.dispatch( { type: "SECTION_SET", isLoading: false } );',
-		'			LoadingError.show( ' + sectionNameString + ' );',
-		'		}',
-		'		return;',
-		'	},',
-		sectionNameString + ' );',
-		'} );\n'
+		'		page( ' + pathRegex + ', function( context, next ) {',
+		'			var envId = ' + envIdString + ';',
+		'			if ( envId && envId.indexOf( config( "env_id" ) ) === -1 ) {',
+		'				return next();',
+		'			}',
+		'			if ( _loadedSections[ ' + moduleString + ' ] ) {',
+		'				controller.setSection( ' + sectionString + ' )( context );',
+		'				context.store.dispatch( activateNextLayoutFocus() );',
+		'				return next();',
+		'			}',
+		'			if ( config.isEnabled( "restore-last-location" ) && restoreLastSession( context.path ) ) {',
+		'				return;',
+		'			}',
+		'			context.store.dispatch( { type: "SECTION_SET", isLoading: true } );',
+		'			require.ensure( [],',
+		'				function( require ) {',
+		'					context.store.dispatch( { type: "SECTION_SET", isLoading: false } );',
+		'					controller.setSection( ' + sectionString + ' )( context );',
+		'					if ( ! _loadedSections[ ' + moduleString + ' ] ) {',
+		'						require( ' + moduleString + ' )( controller.clientRouter );',
+		'						_loadedSections[ ' + moduleString + ' ] = true;',
+		'					}',
+		'					context.store.dispatch( activateNextLayoutFocus() );',
+		'					next();',
+		'				}, function onError( error ) {',
+		'					if ( ! LoadingError.isRetry() ) {',
+		'						console.warn( error );',
+		'						LoadingError.retry( ' + sectionNameString + ' );',
+		'					} else {',
+		'						console.error( error );',
+		'						context.store.dispatch( { type: "SECTION_SET", isLoading: false } );',
+		'						LoadingError.show( ' + sectionNameString + ' );',
+		'					}',
+		'				}, ' + sectionNameString,
+		'			);',
+		'		} );\n\n'
 	];
 
 	return result.join( '\n' );
@@ -160,14 +160,21 @@ function requireTemplate( section ) {
 	return result.join( '\n' );
 }
 
-function singleEnsure( chunkName ) {
+function singleEnsure( section ) {
+	var styles = '';
+
+	if ( section.cssUrls ) {
+		styles = '			switchCSS( \'section-css\', ' + JSON.stringify( section.cssUrls.ltr ) + ' );';
+		styles += '\n			console.log( \'Loading CSS for section ' + section.name + '\' );';
+	}
+
 	var result = [
-		'case ' + JSON.stringify( chunkName ) + ':',
-		'	return require.ensure([], function() {}, ' + JSON.stringify( chunkName ) + ' );',
-		'	break;\n'
+		'		case ' + JSON.stringify( section.name ) + ':',
+		styles,
+		'			return require.ensure([], function() {}, ' + JSON.stringify( section.name ) + ' );\n',
 	];
 
-	return result.join( '\n' );
+	return result.filter( String ).join( '\n' ).concat( '\n' );
 }
 
 function sectionsWithCSSUrls( sections ) {
@@ -186,5 +193,9 @@ module.exports = function( content ) {
 
 	this.addDependency( 'page' );
 
-	return getSectionsModule( sectionsWithCSSUrls( sections ) );
+	const m = getSectionsModule( sectionsWithCSSUrls( sections ) );
+
+	console.log(m);
+
+	return m;
 };
