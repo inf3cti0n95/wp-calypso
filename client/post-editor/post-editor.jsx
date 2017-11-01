@@ -22,7 +22,6 @@ import { parse as parseUrl } from 'url';
  * Internal dependencies
  */
 import actions from 'lib/posts/actions';
-import route from 'lib/route';
 import PostEditStore from 'lib/posts/post-edit-store';
 import EditorActionBar from 'post-editor/editor-action-bar';
 import FeaturedImage from 'post-editor/editor-featured-image';
@@ -77,6 +76,7 @@ import {
 	NESTED_SIDEBAR_REVISIONS,
 } from 'post-editor/editor-sidebar/constants';
 import { removep } from 'lib/formatting';
+import getAllPostsUrl from 'lib/get-all-posts-url';
 
 export const PostEditor = createReactClass( {
 	displayName: 'PostEditor',
@@ -319,6 +319,7 @@ export const PostEditor = createReactClass( {
 		const mode = this.getEditorMode();
 		const isInvalidURL = this.state.loadingError;
 		const siteURL = site ? site.URL + '/' : null;
+		const allPostsUrl = getAllPostsUrl( this.props );
 
 		let isPage;
 		let isTrashed;
@@ -371,7 +372,7 @@ export const PostEditor = createReactClass( {
 						toggleSidebar={ this.toggleSidebar }
 						type={ this.props.type }
 						onMoreInfoAboutEmailVerify={ this.onMoreInfoAboutEmailVerify }
-						allPostsUrl={ this.getAllPostsUrl() }
+						allPostsUrl={ allPostsUrl }
 						nestedSidebar={ this.state.nestedSidebar }
 						setNestedSidebar={ this.setNestedSidebar }
 						selectRevision={ this.selectRevision }
@@ -684,35 +685,9 @@ export const PostEditor = createReactClass( {
 	},
 
 	onClose: function() {
+		const allPostsUrl = getAllPostsUrl( this.props );
 		// go back if we can, if not, hit all posts
-		page.back( this.getAllPostsUrl() );
-	},
-
-	getAllPostsUrl: function() {
-		const { type, selectedSite } = this.props;
-		const site = selectedSite;
-
-		let path;
-		switch ( type ) {
-			case 'page':
-				path = '/pages';
-				break;
-			case 'post':
-				path = '/posts';
-				break;
-			default:
-				path = `/types/${ type }`;
-		}
-
-		if ( type === 'post' && site && ! site.jetpack && ! site.single_user_site ) {
-			path += '/my';
-		}
-
-		if ( site ) {
-			path = route.addSiteFragment( path, site.slug );
-		}
-
-		return path;
+		page.back( allPostsUrl );
 	},
 
 	onMoreInfoAboutEmailVerify: function() {
@@ -856,7 +831,8 @@ export const PostEditor = createReactClass( {
 
 	onPreviewClose: function() {
 		if ( this.state.isPostPublishPreview ) {
-			page.back( this.getAllPostsUrl() );
+			const allPostsUrl = getAllPostsUrl( this.props );
+			page.back( allPostsUrl );
 		} else {
 			this.setState( {
 				showPreview: false,
